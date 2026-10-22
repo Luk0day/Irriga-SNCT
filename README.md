@@ -1,4 +1,3 @@
-# projeto_irriga_o_esp32
 
 # 🌱 Sistema de Irrigação Automática com ESP32
 
