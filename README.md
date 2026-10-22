@@ -136,8 +136,6 @@ Antes de conectar os componentes, desligue a alimentação e confira as identifi
 
 ### 6.1. Sensor de umidade
 
-### 6.1. Sensor de umidade
-
 Considerando um sensor com os pinos `VCC`, `GND` e `AOUT`:
 
 | Pino do sensor | Conexão |
