@@ -132,6 +132,10 @@ Se o LED estiver aceso, significa que o ESP32 ordenou que a irrigação fosse li
 
 Antes de conectar os componentes, desligue a alimentação e confira as identificações dos pinos e as especificações de cada módulo.
 
+![Diagrama de Conexões do ESP32](Diagrama.jpg)
+
+### 6.1. Sensor de umidade
+
 ### 6.1. Sensor de umidade
 
 Considerando um sensor com os pinos `VCC`, `GND` e `AOUT`:
