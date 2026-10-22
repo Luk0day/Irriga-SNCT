@@ -209,42 +209,52 @@ O programa utiliza dois limites de leitura: um para identificar quando o solo es
 // PROJETO: IRRIGACAO AUTOMATICA COM ESP32
 // ===============================================
 
-// Pinos utilizados no projeto (adaptados para ESP32)
-const byte PIN_SENSOR = 34; // Pino de entrada analógica
-const byte PIN_RELE = 22;   // Pino digital de saída
-const byte PIN_LED = 21;    // Pino digital de saída
+// 1. CONFIGURAÇÃO DOS PINOS
+// 'const' significa que este valor é fixo e não vai mudar durante o programa.
+// 'byte' é um tipo de número pequeno que economiza memória do ESP32.
+const byte PIN_SENSOR = 34; // Pino onde o sensor de umidade está conectado (leitura)
+const byte PIN_RELE = 22;   // Pino que vai ligar/desligar a bomba de água (saída)
+const byte PIN_LED = 21;    // Pino que vai ligar/desligar a luz indicadora (saída)
 
-// Limites iniciais de exemplo (valores para ADC de 12-bits: 0 a 4095).
-// Ajuste estes valores usando as leituras reais.
-const int LIMITE_SECO = 2500;
-const int LIMITE_UMIDO = 1800;
+// 2. LIMITES DE UMIDADE
+// O ESP32 lê a umidade dando uma nota de 0 a 4095.
+const int LIMITE_SECO = 2500;  // Se a leitura for igual ou maior que 2500, a terra está seca.
+const int LIMITE_UMIDO = 1800; // Se a leitura cair para 1800 ou menos, a terra está úmida.
 
-// Em muitos sensores, o valor diminui quando
-// o solo fica mais umido. Confirme no teste.
-const bool VALOR_ALTO_SIGNIFICA_SECO = true;
+// 3. COMPORTAMENTO DOS COMPONENTES
+// 'bool' (booleano) é uma variável que só guarda VERDADEIRO (true) ou FALSO (false).
+// Alguns sensores mostram números altos para terra seca, outros para terra molhada.
+const bool VALOR_ALTO_SIGNIFICA_SECO = true; // Aqui avisamos que número alto = terra seca.
 
-// Muitos modulos rele sao acionados com LOW.
-// Se o seu funcionar de outra forma, ajuste.
-const bool RELE_ATIVO_EM_LOW = true;
+// A maioria dos módulos relé liga quando recebe energia baixa (LOW).
+const bool RELE_ATIVO_EM_LOW = true; // Avisamos que nosso relé funciona de forma invertida.
 
-// Guarda o estado atual da irrigacao.
-bool irrigando = false;
+// 4. MEMÓRIA DO SISTEMA
+// Esta variável serve para o ESP32 lembrar se a bomba está ligada agora ou não.
+bool irrigando = false; 
 
-// Liga ou desliga a bomba e o LED.
+// ===============================================
+// FUNÇÃO PERSONALIZADA: CONTROLAR A IRRIGAÇÃO
+// ===============================================
+// Criamos essa função para não repetir código. Ela recebe uma ordem: 'ligar' (true ou false)
 void controlarIrrigacao(bool ligar) {
 
+  // Verifica como o nosso relé funciona (se ativa com LOW ou HIGH)
   if (RELE_ATIVO_EM_LOW) {
+    // Se ligar for verdadeiro (true), envia LOW (liga a bomba). Senão, envia HIGH (desliga).
     digitalWrite(PIN_RELE, ligar ? LOW : HIGH);
   } else {
+    // Se o relé for normal, envia HIGH para ligar e LOW para desligar.
     digitalWrite(PIN_RELE, ligar ? HIGH : LOW);
   }
 
-  // O LED acompanha o comando da bomba.
+  // O LED sempre acende com HIGH e apaga com LOW.
   digitalWrite(PIN_LED, ligar ? HIGH : LOW);
 
-  // Atualiza o estado armazenado.
+  // Salva na memória do sistema o que acabamos de fazer (ligamos ou desligamos a bomba)
   irrigando = ligar;
 
+  // Imprime uma mensagem na tela do computador para sabermos o que aconteceu.
   if (ligar) {
     Serial.println("Irrigacao iniciada.");
   } else {
@@ -252,61 +262,65 @@ void controlarIrrigacao(bool ligar) {
   }
 }
 
+// ===============================================
+// PREPARAÇÃO DO SISTEMA (Roda apenas 1 vez)
+// ===============================================
 void setup() {
+  // Liga o "telefone" entre o ESP32 e o computador na velocidade 115200.
+  Serial.begin(115200); 
 
-  // Inicia a comunicacao com o computador.
-  Serial.begin(115200); // Velocidade padrão comum para ESP32
-
-  // Define os pinos que controlam as saidas.
+  // Configura os pinos do relé e do LED como SAÍDA de energia (OUTPUT).
   pinMode(PIN_RELE, OUTPUT);
   pinMode(PIN_LED, OUTPUT);
 
-  // Mantem a bomba desligada no inicio.
-  digitalWrite(PIN_RELE,
-               RELE_ATIVO_EM_LOW ? HIGH : LOW);
-
+  // Força a bomba e o LED a começarem desligados assim que o sistema liga.
+  digitalWrite(PIN_RELE, RELE_ATIVO_EM_LOW ? HIGH : LOW);
   digitalWrite(PIN_LED, LOW);
 
   Serial.println("Sistema de irrigacao com ESP32 iniciado.");
 }
 
+// ===============================================
+// ROTINA PRINCIPAL (Roda infinitamente)
+// ===============================================
 void loop() {
-
-  // Faz a leitura do sensor (0 a 4095).
+  
+  // 1. Lê a umidade da terra e guarda o valor (de 0 a 4095) na variável 'leitura'
   int leitura = analogRead(PIN_SENSOR);
 
-  // Mostra a leitura para auxiliar na calibracao.
+  // 2. Mostra essa leitura na tela do computador
   Serial.print("Leitura do solo: ");
   Serial.println(leitura);
 
-  // Interpreta a leitura conforme o sensor utilizado.
+  // 3. Cria duas caixinhas na memória para responder "Sim" ou "Não"
   bool soloSeco;
   bool soloUmido;
 
+  // 4. Analisa a leitura baseada na regra que definimos lá em cima
   if (VALOR_ALTO_SIGNIFICA_SECO) {
-
-    soloSeco = leitura >= LIMITE_SECO;
-    soloUmido = leitura <= LIMITE_UMIDO;
-
+    // Se número alto é seco: a leitura é maior ou igual ao limite seco?
+    soloSeco = leitura >= LIMITE_SECO;  
+    // A leitura é menor ou igual ao limite úmido?
+    soloUmido = leitura <= LIMITE_UMIDO; 
   } else {
-
+    // Se o sensor funcionar ao contrário, inverte a lógica de maior/menor.
     soloSeco = leitura <= LIMITE_SECO;
     soloUmido = leitura >= LIMITE_UMIDO;
-
   }
 
-  // Se o solo estiver seco, liga a irrigacao.
+  // 5. TOMADA DE DECISÃO PARA LIGAR
+  // Se NÃO está irrigando (!irrigando) E (&&) o solo está seco:
   if (!irrigando && soloSeco) {
-    controlarIrrigacao(true);
+    controlarIrrigacao(true); // Chama a nossa função mandando LIGAR a bomba
   }
-
-  // Se o solo estiver umido o suficiente,
-  // desliga a irrigacao.
+  
+  // 6. TOMADA DE DECISÃO PARA DESLIGAR
+  // Caso contrário, se JÁ está irrigando (irrigando) E (&&) o solo ficou úmido:
   else if (irrigando && soloUmido) {
-    controlarIrrigacao(false);
+    controlarIrrigacao(false); // Chama a nossa função mandando DESLIGAR a bomba
   }
 
-  // Aguarda meio segundo antes da proxima leitura.
+  // Espera meio segundo (500 milissegundos) antes de fazer a próxima leitura
   delay(500);
 }
 ```
